@@ -1,0 +1,217 @@
+Build a React-based Nutrition & Meal Tracking App for a fitness recomposition goal. The app should have the following features and design:
+
+─────────────────────────────────────────────
+USER PROFILE (hardcoded as default):
+─────────────────────────────────────────────
+- Name: Himanshu
+- Age: 26 | Weight: 83kg | Height: 6ft (183cm)
+- Goal: Body Recomposition (Fat Loss + Muscle Gain)
+- Daily Calorie Target: 2,200–2,400 kcal
+- Protein Target: 160–170g | Carbs: 220–250g | Fat: 60–70g
+
+─────────────────────────────────────────────
+CORE FEATURES:
+─────────────────────────────────────────────
+
+1. WEEKLY MEAL PLAN VIEW
+- Show all 7 days in a weekly calendar layout
+- Each day shows the activity (Badminton / Football / Rest)
+- Each day has 4–5 planned meals with time, meal name, food description, and macros (calories, protein, carbs, fat)
+- Use the following weekly plan data as default content:
+    Mon–Thu: Badminton 8–9am
+    Fri: Football 9–10:30pm
+    Sat: Light activity
+    Sun: Full rest day
+
+2. DAILY VIEW (tap any day to open)
+- Show planned meals in a timeline layout by time of day
+- Each meal card shows: time, meal type, food name, cal/protein/carb/fat
+- Show a daily macro progress bar (planned vs target)
+- A floating "+" button to log actual food eaten
+
+3. FOOD LOGGER (the key feature)
+- User can tap any planned meal and mark it as "Eaten as planned" OR "Log what I actually had"
+- If logging actual: show a form with fields:
+    * Food name (text input)
+    * Calories (number)
+    * Protein (number)
+    * Carbs (number)
+    * Fat (number)
+    * Optional note
+- After logging, the meal card updates to show actual vs planned side by side
+- Color code the difference:
+    * Green if within 10% of target
+    * Orange if over/under by 10–20%
+    * Red if over/under by 20%+
+
+4. DAILY MACRO DASHBOARD
+- At top of each day view show 4 macro rings/progress bars:
+    * Calories (target: 2,200–2,400)
+    * Protein (target: 160–170g)
+    * Carbs (target: 220–250g)
+    * Fat (target: 60–70g)
+- Show: Planned | Logged | Remaining
+- Remaining turns red if over target
+
+5. WEEKLY PROGRESS SUMMARY
+- A summary screen showing all 7 days
+- Bar chart or visual showing daily calories: planned vs actually logged
+- Weekly averages for all 4 macros
+- A streak counter: "X days this week you hit your protein target"
+- Days where no logging was done shown as "Not logged yet"
+
+6. SNACK SUGGESTIONS PANEL
+- A tab or bottom sheet showing snack options categorised as:
+    * High Protein
+    * Pre-Workout
+    * Evening / Pre-Bed
+    * Calorie Boost
+- Each snack shows cal/protein/carbs/fat and best timing
+- User can tap "Add to today" to log a snack directly
+
+─────────────────────────────────────────────
+WEEKLY MEAL PLAN DATA:
+─────────────────────────────────────────────
+
+MONDAY (Badminton 8–9am):
+  7:15am   | Pre-Workout Snack    | Banana + Black Coffee                      | 120 kcal | P:1g  | C:28g | F:0.5g
+  9:15am   | Post-Workout Whey    | 1 scoop whey in water                      | 125 kcal | P:25g | C:5g  | F:1g
+  10:00am  | Breakfast            | Egg Bhurji (3 eggs+1 white) + 2 WW Toast   | 420 kcal | P:28g | C:35g | F:16g
+  1:30pm   | Lunch                | Grilled Chicken Rice Bowl + Salad          | 550 kcal | P:45g | C:55g | F:12g
+  5:00pm   | Evening Snack        | Greek Yogurt (200g) + Mixed Nuts           | 280 kcal | P:18g | C:20g | F:14g
+  8:00pm   | Dinner               | Masoor Dal + 2 WW Rotis + Curd             | 520 kcal | P:28g | C:70g | F:10g
+
+TUESDAY (Badminton 8–9am):
+  7:15am   | Pre-Workout Snack    | Apple + Black Coffee                       | 100 kcal | P:0.5g | C:25g | F:0.3g
+  9:15am   | Post-Workout Whey    | 1 scoop whey in water                      | 125 kcal | P:25g  | C:5g  | F:1g
+  10:00am  | Breakfast            | Moong Dal Chilla (3pcs) + Green Chutney    | 380 kcal | P:22g  | C:45g | F:8g
+  1:30pm   | Lunch                | Rajma + 1 cup Rice + Onion Salad           | 550 kcal | P:22g  | C:80g | F:10g
+  5:00pm   | Evening Snack        | 2 Boiled Eggs + Banana                     | 210 kcal | P:14g  | C:28g | F:8g
+  8:00pm   | Dinner               | Chicken Stir Fry (150g) + 2 Rotis + Salad  | 520 kcal | P:38g  | C:55g | F:15g
+
+WEDNESDAY (Badminton 8–9am):
+  7:15am   | Pre-Workout Snack    | Banana + Black Coffee                      | 120 kcal | P:1g  | C:28g | F:0.5g
+  9:15am   | Post-Workout Whey    | 1 scoop whey in water                      | 125 kcal | P:25g | C:5g  | F:1g
+  10:00am  | Breakfast            | Oats Porridge (1 cup) + 1 Boiled Egg       | 380 kcal | P:20g | C:55g | F:8g
+  1:30pm   | Lunch                | Paneer Bhurji (150g) + 2 Rotis + Salad     | 580 kcal | P:32g | C:45g | F:22g
+  5:00pm   | Evening Snack        | Roasted Chana + Masala Chaas 250ml         | 220 kcal | P:12g | C:28g | F:5g
+  8:00pm   | Dinner               | Grilled Fish (150g) + 1 cup Rice + Stir Fried Veg | 480 kcal | P:38g | C:50g | F:12g
+
+THURSDAY (Badminton 8–9am):
+  7:15am   | Pre-Workout Snack    | Banana + Black Coffee                      | 120 kcal | P:1g  | C:28g | F:0.5g
+  9:15am   | Post-Workout Whey    | 1 scoop whey in water                      | 125 kcal | P:25g | C:5g  | F:1g
+  10:00am  | Breakfast            | 3 Egg Omelette (spinach+onion) + 2 WW Toast | 430 kcal | P:30g | C:35g | F:16g
+  1:30pm   | Lunch                | Chicken Curry (200g) + 1 cup Rice          | 560 kcal | P:44g | C:55g | F:18g
+  5:00pm   | Evening Snack        | Peanut Butter (1.5 tbsp) + 2 Rice Cakes    | 250 kcal | P:8g  | C:28g | F:12g
+  8:00pm   | Dinner               | Dal Tadka + 2 Rotis + Curd                 | 520 kcal | P:26g | C:70g | F:10g
+
+FRIDAY (Football 9–10:30pm):
+  8:00am   | Breakfast            | Egg Bhurji (3 eggs) + 2 WW Toast + Coffee  | 420 kcal | P:28g | C:35g | F:16g
+  1:30pm   | Lunch                | Chicken Rice Bowl + Salad                  | 550 kcal | P:45g | C:55g | F:12g
+  5:00pm   | Evening Snack        | Greek Yogurt + Banana                      | 230 kcal | P:15g | C:32g | F:5g
+  7:30pm   | Pre-Match Light Meal | 2 Rotis + Dal (light, easy digest)         | 380 kcal | P:16g | C:60g | F:8g
+  10:45pm  | Post-Match Whey      | 1 scoop whey in water (recovery)           | 125 kcal | P:25g | C:5g  | F:1g
+
+SATURDAY (Light/Rest Day):
+  8:30am   | Breakfast            | Idli (3) + Sambar + Masala Chaas           | 360 kcal | P:14g | C:55g | F:6g
+  1:30pm   | Lunch                | Dal Makhani + 2 Rotis + Salad              | 560 kcal | P:24g | C:70g | F:18g
+  5:00pm   | Evening Snack        | Whey Shake + 1 Fruit                       | 220 kcal | P:26g | C:20g | F:1g
+  8:30pm   | Dinner               | Grilled Chicken (180g) + Stir Fried Veg + 1 Roti | 480 kcal | P:40g | C:35g | F:12g
+
+SUNDAY (Full Rest Day):
+  9:00am   | Breakfast            | Veg Poha + 2 Boiled Eggs + Chai            | 420 kcal | P:20g | C:60g | F:12g
+  2:00pm   | Lunch                | Butter Chicken + 1 cup Rice                | 530 kcal | P:36g | C:50g | F:16g
+  5:30pm   | Evening Snack        | Whey Shake + Mixed Nuts                    | 280 kcal | P:28g | C:10g | F:12g
+  8:30pm   | Dinner               | Moong Dal + 2 Rotis + Curd + Salad         | 500 kcal | P:24g | C:65g | F:10g
+
+─────────────────────────────────────────────
+SNACK DATA:
+─────────────────────────────────────────────
+
+HIGH PROTEIN:
+  Boiled Eggs (2)              | 140 kcal | P:12g | C:1g  | F:10g | Post-workout / anytime
+  Greek Yogurt (200g)          | 130 kcal | P:12g | C:10g | F:4g  | Pre-bed / evening
+  Paneer Cubes (100g)          | 265 kcal | P:18g | C:3g  | F:20g | Afternoon snack
+  Whey + Banana                | 250 kcal | P:27g | C:30g | F:2g  | Post-workout
+  Chicken Breast (100g)        | 165 kcal | P:31g | C:0g  | F:4g  | Anytime
+
+PRE-WORKOUT:
+  Banana + Black Coffee        | 120 kcal | P:1g  | C:28g | F:0.5g | 30 min before session
+  Apple + Handful Almonds      | 200 kcal | P:5g  | C:30g | F:10g  | 30–45 min before
+  2 Rice Cakes + Peanut Butter | 220 kcal | P:7g  | C:28g | F:8g   | 30 min before
+  Dates (3–4) + Water          | 90 kcal  | P:1g  | C:22g | F:0.2g | 15 min before match
+
+EVENING / PRE-BED:
+  Masala Chaas (250ml)         | 50 kcal  | P:3g  | C:5g  | F:1g  | After dinner
+  Mixed Nuts (30g)             | 180 kcal | P:5g  | C:8g  | F:15g | Evening snack
+  Roasted Chana (40g)          | 150 kcal | P:9g  | C:24g | F:3g  | Afternoon / evening
+  Curd (1 cup) + Jeera         | 100 kcal | P:6g  | C:8g  | F:4g  | Post dinner
+  Milk (1 cup) + Turmeric      | 150 kcal | P:8g  | C:12g | F:5g  | Pre-bed
+
+CALORIE BOOST:
+  Peanut Butter (2 tbsp)       | 190 kcal | P:8g  | C:6g  | F:16g | When 300+ kcal short
+  Whole Milk (250ml)           | 150 kcal | P:8g  | C:12g | F:8g  | Any time of day
+  Banana + Whey Shake          | 250 kcal | P:27g | C:30g | F:2g  | Post workout
+  Avocado Toast (1 slice)      | 220 kcal | P:5g  | C:22g | F:14g | Breakfast add-on
+
+─────────────────────────────────────────────
+UI / UX REQUIREMENTS:
+─────────────────────────────────────────────
+- Mobile-first design optimised for phone screen
+- Primary colors: Dark green (#1A5276) and white, accent: (#1E8449)
+- Clean card-based layout with subtle shadows
+- Bottom navigation bar with 4 tabs: Today | Week | Log | Snacks
+- Smooth transitions between views
+- Use Recharts for all charts and graphs
+- Use emoji icons for meals and activity types
+- All data persisted using window.storage API so logs survive between sessions
+
+─────────────────────────────────────────────
+DATA STRUCTURE (window.storage):
+─────────────────────────────────────────────
+Store the following structure:
+
+{
+  "weekPlan": { ...7 days of planned meals... },
+  "logs": {
+    "YYYY-MM-DD": {
+      "meals": [
+        {
+          "mealId": "mon-breakfast",
+          "loggedFood": "Egg bhurji + toast",
+          "calories": 420,
+          "protein": 28,
+          "carbs": 35,
+          "fat": 16,
+          "note": "Added extra egg",
+          "status": "logged_actual"
+        }
+      ],
+      "water": 2500
+    }
+  }
+}
+
+status can be: "planned" | "eaten_as_planned" | "logged_actual" | "skipped"
+
+─────────────────────────────────────────────
+SPECIAL BEHAVIOURS:
+─────────────────────────────────────────────
+- On app load, default to today's date and show today's meal plan
+- Map today's date to the correct day of the week automatically
+- Friday layout shows a warning banner: "Football tonight — keep dinner light!"
+- Post-workout whey shake meals highlighted in a distinct accent color
+- If it's past a meal's scheduled time and it hasn't been logged, show a subtle "Don't forget to log!" indicator
+- Water intake tracker at bottom of daily view (target: 3.5L/day) with +250ml tap buttons
+- Streak counter on weekly summary: "X days this week you hit your protein target"
+
+─────────────────────────────────────────────
+TECH STACK:
+─────────────────────────────────────────────
+- React with hooks (useState, useEffect, useCallback)
+- Tailwind CSS for styling (core utility classes only)
+- Recharts for charts (import from "recharts")
+- window.storage API for persistence
+- Single file React component with default export
+- No required props
+- Do NOT use localStorage or sessionStorage

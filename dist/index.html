@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Fuel" />
+    <title>Fuel — Nutrition Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg:        #0a0a0b;
+        --bg-2:      #101015;
+        --surface:   #16161c;
+        --surface-2: #1f1f28;
+        --surface-3: #2a2a36;
+        --border:    rgba(255, 255, 255, 0.07);
+        --border-2:  rgba(255, 255, 255, 0.12);
+        --text:      #f4f4f5;
+        --text-2:    #a1a1aa;
+        --text-3:    #71717a;
+        --accent:    #d7ff3a;   /* electric lime */
+        --accent-2:  #c6ee29;
+        --accent-fg: #0a0a0b;
+        --mint:      #34d399;
+        --cyan:      #22d3ee;
+        --amber:     #fbbf24;
+        --violet:    #a78bfa;
+        --coral:     #f87171;
+      }
+      html, body, #root { height: 100%; }
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-feature-settings: 'cv11', 'ss01';
+        color: var(--text);
+        background:
+          radial-gradient(1200px 600px at -10% -20%, rgba(167, 139, 250, 0.10), transparent 60%),
+          radial-gradient(900px 500px at 110% 0%,   rgba(215, 255, 58, 0.08), transparent 55%),
+          radial-gradient(800px 700px at 50% 110%,  rgba(34, 211, 238, 0.06), transparent 60%),
+          var(--bg);
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
+      }
+      .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -0.02em; }
+      .glass { background: rgba(22, 22, 28, 0.55); backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); }
+      input[type="date"], input[type="number"], input[type="text"], textarea { color-scheme: dark; }
+      input::placeholder, textarea::placeholder { color: var(--text-3); }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      ::selection { background: rgba(215, 255, 58, 0.35); color: #fff; }
+
+      @keyframes confettiFall {
+        0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+        80%  { opacity: 1; }
+        100% { transform: translate3d(var(--dx, 0px), 110vh, 0) rotate(var(--rot, 720deg)); opacity: 0; }
+      }
+      @keyframes pop {
+        0%   { transform: scale(0.85); opacity: 0; }
+        60%  { transform: scale(1.08); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .pop { animation: pop 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+      @keyframes flameWiggle {
+        0%, 100% { transform: rotate(-4deg) scale(1); }
+        50%      { transform: rotate(4deg)  scale(1.08); }
+      }
+      .flame { display: inline-block; animation: flameWiggle 1.4s ease-in-out infinite; }
+
+      /* Page transition — fires on tab change via key={tab} */
+      @keyframes pageEnter {
+        from { transform: translateY(8px); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
+      }
+      .page-enter { animation: pageEnter 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+      /* Modal entrance — backdrop fade, sheet slide-up */
+      @keyframes overlayFade {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      .overlay-fade { animation: overlayFade 200ms ease-out both; }
+
+      @keyframes sheetSlideUp {
+        from { transform: translateY(24px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      .sheet-slide-up { animation: sheetSlideUp 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+      /* Stagger entrance — for the top-of-page cards on Today */
+      @keyframes fadeInUp {
+        from { transform: translateY(10px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      .stagger { animation: fadeInUp 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+      .stagger-1 { animation-delay:  40ms; }
+      .stagger-2 { animation-delay:  90ms; }
+      .stagger-3 { animation-delay: 140ms; }
+      .stagger-4 { animation-delay: 190ms; }
+
+      /* Bottom-nav active tab indicator */
+      @keyframes tabPop {
+        0%   { transform: scale(0.6); opacity: 0; }
+        70%  { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1);   opacity: 1; }
+      }
+      .tab-pop { animation: tabPop 240ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+      /* iPhone safe-area — keeps nav/FAB above home indicator */
+      .nav-safe   { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+      .fab-safe   { bottom: calc(96px   + env(safe-area-inset-bottom, 0px)); }
+      .toast-safe { bottom: calc(160px  + env(safe-area-inset-bottom, 0px)); }
+
+      /* Respect reduced-motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-DDu8mxfp.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

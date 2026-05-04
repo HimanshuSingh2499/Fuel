@@ -1463,6 +1463,79 @@ const HeroMacroCard = ({ planned, logged, targets }) => {
 }
 
 /* ---------------------------------------------------------------------------
+   Reminders card
+--------------------------------------------------------------------------- */
+const RemindersCard = ({ plan, dayLog, water, waterTarget, onOpenWater }) => {
+  const [now, setNow] = useState(() => new Date())
+  const [dismissed, setDismissed] = useState(new Set())
+  const notifDenied = 'Notification' in window && Notification.permission === 'denied'
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const reminders = []
+
+  // Meal reminders — past meals with no logged status
+  plan.forEach(meal => {
+    if (meal.timeMin > nowMin) return // not yet
+    const log = dayLog.meals.find(x => x.mealId === meal.id)
+    if (log?.status === 'eaten_as_planned' || log?.status === 'logged_actual' || log?.status === 'skipped') return
+    reminders.push({ id: `meal-${meal.id}`, icon: '🍽️', label: meal.type, text: `${meal.food} — not logged yet`, color: '#fbbf24' })
+  })
+
+  // Water reminder — only after 10 AM, only if below target
+  if (nowMin >= 10 * 60 && water < waterTarget) {
+    const pct = Math.round((water / waterTarget) * 100)
+    const urgency = pct < 40 ? '🚨' : pct < 70 ? '💧' : '💧'
+    reminders.push({ id: 'water', icon: urgency, label: 'Hydration', text: `${pct}% of daily target — ${waterTarget - water}ml to go`, color: '#22d3ee', action: onOpenWater, actionLabel: 'Log' })
+  }
+
+  const visible = reminders.filter(r => !dismissed.has(r.id))
+  if (visible.length === 0 && !notifDenied) return null
+
+  return (
+    <div className="space-y-2">
+      <div className="text-[10px] uppercase tracking-widest font-semibold text-zinc-500 px-1">Reminders</div>
+      {notifDenied && (
+        <div className="flex items-center gap-3 px-3.5 py-3 rounded-2xl border border-zinc-700/50 bg-zinc-800/40">
+          <span className="text-xl shrink-0">🔕</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Notifications blocked</div>
+            <div className="text-xs text-zinc-500 mt-0.5 leading-snug">Enable in browser settings to get pop-up meal & water alerts</div>
+          </div>
+        </div>
+      )}
+      {visible.map(r => (
+        <div key={r.id} className="flex items-center gap-3 px-3.5 py-3 rounded-2xl border"
+          style={{ background: `${r.color}08`, borderColor: `${r.color}25` }}>
+          <span className="text-xl shrink-0">{r.icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: r.color }}>{r.label}</div>
+            <div className="text-xs text-zinc-300 mt-0.5 leading-snug">{r.text}</div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {r.action && (
+              <button onClick={r.action}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-black transition active:scale-95"
+                style={{ background: r.color }}>
+                {r.actionLabel}
+              </button>
+            )}
+            <button onClick={() => setDismissed(d => new Set([...d, r.id]))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition text-base leading-none">
+              ×
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------------------
    Today / Daily View
 --------------------------------------------------------------------------- */
 const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger, openChooser, profile, weights, setWeights, onOpenWater, onOpenWeight }) => {
@@ -1589,6 +1662,17 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
         ? <CheatDayCard onToggleOff={toggleCheatDay} />
         : <HeroMacroCard planned={planned} logged={logged} targets={t} />
       }
+
+      {/* Reminders — only for today, hidden on cheat days */}
+      {isToday && !isCheatDay && (
+        <RemindersCard
+          plan={plan}
+          dayLog={dayLog}
+          water={water}
+          waterTarget={profile.waterTarget}
+          onOpenWater={onOpenWater}
+        />
+      )}
 
       {/* Meal timeline */}
       <div className="space-y-2">
@@ -2151,6 +2235,29 @@ const SettingsForm = ({ profile, onSave, onCancel, onReset }) => {
         </div>
       </section>
 
+      {/* Notification test */}
+      <div className="pt-2 border-t border-white/[0.07]">
+        <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Notifications</div>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 text-xs text-zinc-400">
+            Permission: <span className={`font-semibold ${Notification.permission === 'granted' ? 'text-[#34d399]' : Notification.permission === 'denied' ? 'text-[#f87171]' : 'text-[#fbbf24]'}`}>
+              {typeof Notification !== 'undefined' ? Notification.permission : 'not supported'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof Notification === 'undefined') return alert('Notifications not supported in this browser')
+              if (Notification.permission !== 'granted') return alert('Permission not granted — allow notifications in browser settings first')
+              new Notification('🔔 Test from Fuel', { body: 'Notifications are working correctly!', icon: '/favicon.ico' })
+            }}
+            className="px-3 py-1.5 text-xs rounded-xl border border-white/10 text-zinc-300 hover:bg-white/5 transition"
+          >
+            Send test
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-2 justify-end pt-1">
         <button type="button" onClick={onReset} className="px-3.5 py-2 text-xs rounded-xl border border-white/10 text-zinc-500 hover:bg-white/5 transition">Reset</button>
         <button type="button" onClick={onCancel} className="px-3.5 py-2 text-sm rounded-xl border border-white/10 text-zinc-300 hover:bg-white/5 transition">Cancel</button>
@@ -2241,6 +2348,70 @@ export default function App() {
     if (!loaded) return
     storage.set(STORAGE_KEY, JSON.stringify({ logs, weights, profile }))
   }, [logs, weights, profile, loaded])
+
+  // Browser notifications — request permission once, then fire on meal/water triggers
+  const firedNotifs = useRef(new Set())
+  const [notifPermission, setNotifPermission] = useState(() =>
+    'Notification' in window ? Notification.permission : 'denied'
+  )
+  useEffect(() => {
+    if (!loaded) return
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then(result => {
+        setNotifPermission(result)
+        if (result === 'granted') {
+          new Notification('🔔 Fuel reminders active', {
+            body: 'You\'ll get pop-ups for unlogged meals and water checkpoints.',
+            icon: '/favicon.ico',
+          })
+        }
+      })
+    }
+  }, [loaded])
+
+  useEffect(() => {
+    if (!loaded) return
+    const check = () => {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return
+      const today = todayISO()
+      const now = new Date()
+      const nowMin = now.getHours() * 60 + now.getMinutes()
+      const dayLog = logs[today] || { meals: [], water: 0 }
+      const water = dayLog.water || 0
+      const wTarget = profile.waterTarget
+      const dayPlan = WEEK_PLAN[isoToDayKey(today)]
+
+      // Meal reminders — 15 min grace period after scheduled time
+      dayLog.cheatDay || dayPlan.forEach(meal => {
+        if (nowMin < meal.timeMin + 15) return
+        const log = dayLog.meals.find(x => x.mealId === meal.id)
+        if (log?.status === 'eaten_as_planned' || log?.status === 'logged_actual' || log?.status === 'skipped') return
+        const id = `meal-${meal.id}-${today}`
+        if (firedNotifs.current.has(id)) return
+        firedNotifs.current.add(id)
+        new Notification(`🍽️ ${meal.type}`, { body: `${meal.food} — log it or skip`, tag: id, icon: '/favicon.ico' })
+      })
+
+      // Water reminders at checkpoints — only fire if below the threshold
+      const waterCheckpoints = [
+        { minTime: 10 * 60, id: `w-10-${today}`, pctNeeded: 0.01, msg: 'You haven\'t logged any water yet. Start hydrating!' },
+        { minTime: 14 * 60, id: `w-14-${today}`, pctNeeded: 0.40, msg: `Only ${Math.round((water/wTarget)*100)}% done — aim for 40% by now.` },
+        { minTime: 18 * 60, id: `w-18-${today}`, pctNeeded: 0.70, msg: `${wTarget - water}ml to go — keep it up!` },
+        { minTime: 21 * 60, id: `w-21-${today}`, pctNeeded: 1.00, msg: `${wTarget - water}ml left to hit your daily target.` },
+      ]
+      waterCheckpoints.forEach(({ minTime, id, pctNeeded, msg }) => {
+        if (nowMin < minTime) return
+        if (water / wTarget >= pctNeeded) return
+        if (firedNotifs.current.has(id)) return
+        firedNotifs.current.add(id)
+        new Notification('💧 Hydration Reminder', { body: msg, tag: id, icon: '/favicon.ico' })
+      })
+    }
+    check()
+    const interval = setInterval(check, 60_000)
+    return () => clearInterval(interval)
+  }, [logs, loaded, profile.waterTarget, notifPermission])
 
   const flash = useCallback((msg) => {
     setToast(msg)

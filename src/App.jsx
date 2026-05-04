@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { FOODS } from './foods.js'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Legend, LineChart, Line, ReferenceLine, ReferenceArea
@@ -437,6 +438,7 @@ const computeProteinStreak = (logs, proteinMin) => {
     const dayKey = isoToDayKey(cursor)
     const plan = WEEK_PLAN[dayKey]
     const dayLog = logs[cursor]
+    if (dayLog?.cheatDay) { cursor = addDays(cursor, -1); continue } // cheat days don't break or count
     const hasAnyLog = dayLog && dayLog.meals && dayLog.meals.length > 0
     const totals = hasAnyLog ? sumLogged(dayLog, plan) : null
     const hit = totals && totals.protein >= proteinMin
@@ -683,6 +685,393 @@ const LogChooser = ({ onPickFood, onPickWorkout }) => (
 )
 
 /* ---------------------------------------------------------------------------
+   Food search modal — local DB first, Open Food Facts fallback
+--------------------------------------------------------------------------- */
+const FoodSearchModal = ({ onAdd, onClose }) => {
+  const [tab, setTab] = useState('search') // 'search' | 'manual'
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState(null)
+  const [grams, setGrams] = useState('100')
+  const [offResults, setOffResults] = useState([])
+  const [offLoading, setOffLoading] = useState(false)
+  const [basket, setBasket] = useState([]) // [{ id, name, grams, cal, protein, carbs, fat }]
+  const [manual, setManual] = useState({ name: '', cal: '', protein: '', carbs: '', fat: '' })
+  const debounceRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => { if (!selected) inputRef.current?.focus() }, [selected])
+
+  const localResults = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return FOODS
+      .filter(f => f.name.toLowerCase().includes(q) || f.category.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const ai = a.name.toLowerCase().indexOf(q)
+        const bi = b.name.toLowerCase().indexOf(q)
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+      })
+      .slice(0, 8)
+  }, [query])
+
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 3) { setOffResults([]); return }
+    clearTimeout(debounceRef.current)
+    setOffLoading(true)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=6&fields=product_name,nutriments&search_simple=1&action=process`
+        )
+        const data = await res.json()
+        const parsed = (data.products || [])
+          .filter(p => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
+          .slice(0, 5)
+          .map((p, i) => ({
+            id: `off-${i}-${q}`,
+            name: p.product_name,
+            category: 'Open Food Facts',
+            cal:     Math.round(p.nutriments['energy-kcal_100g']     || 0),
+            protein: Math.round((p.nutriments['proteins_100g']        || 0) * 10) / 10,
+            carbs:   Math.round((p.nutriments['carbohydrates_100g']   || 0) * 10) / 10,
+            fat:     Math.round((p.nutriments['fat_100g']             || 0) * 10) / 10,
+            source: 'off',
+          }))
+        setOffResults(parsed)
+      } catch { setOffResults([]) }
+      finally { setOffLoading(false) }
+    }, 650)
+    return () => clearTimeout(debounceRef.current)
+  }, [query])
+
+  const allResults = selected ? [] : [...localResults, ...offResults] // kept for empty-state check
+  const hasPieces = !!selected?.serving
+  const [mode, setMode] = useState('pieces')
+  const [qty, setQty] = useState('2')
+  useEffect(() => {
+    if (selected) { setMode(selected.serving ? 'pieces' : 'grams'); setQty('2'); setGrams('100') }
+  }, [selected?.id])
+
+  const gramsVal = mode === 'pieces' && hasPieces
+    ? Math.max(1, Math.round((Number(qty) || 1) * selected.serving.weight))
+    : Math.max(1, Number(grams) || 1)
+
+  const scaled = selected ? {
+    cal:     Math.round(selected.cal     * gramsVal / 100),
+    protein: Math.round(selected.protein * gramsVal / 100 * 10) / 10,
+    carbs:   Math.round(selected.carbs   * gramsVal / 100 * 10) / 10,
+    fat:     Math.round(selected.fat     * gramsVal / 100 * 10) / 10,
+  } : null
+
+  const addToBasket = () => {
+    if (!selected) return
+    const qtyNum = Number(qty) || 1
+    const label = mode === 'pieces' && hasPieces
+      ? `${qtyNum} ${selected.serving.label}${qtyNum !== 1 ? 's' : ''}`
+      : `${gramsVal}g`
+    const displayName = mode === 'pieces' && hasPieces
+      ? `${qtyNum} ${selected.name}`
+      : selected.name
+    setBasket(b => [...b, {
+      id: `${selected.id}-${Date.now()}`,
+      name: selected.name,
+      displayName,
+      label,
+      grams: gramsVal,
+      ...scaled,
+    }])
+    setSelected(null)
+    setQuery('')
+    setGrams('100')
+    setQty('2')
+  }
+
+  const addManualToBasket = () => {
+    if (!manual.name.trim()) return
+    const trimmed = manual.name.trim()
+    setBasket(b => [...b, {
+      id: `manual-${Date.now()}`,
+      name: trimmed,
+      displayName: trimmed,
+      label: 'manual',
+      grams: 0,
+      cal:     Number(manual.cal)     || 0,
+      protein: Number(manual.protein) || 0,
+      carbs:   Number(manual.carbs)   || 0,
+      fat:     Number(manual.fat)     || 0,
+    }])
+    setManual({ name: '', cal: '', protein: '', carbs: '', fat: '' })
+  }
+
+  const removeFromBasket = (id) => setBasket(b => b.filter(x => x.id !== id))
+
+  const total = basket.reduce((acc, x) => ({
+    cal:     acc.cal     + x.cal,
+    protein: Math.round((acc.protein + x.protein) * 10) / 10,
+    carbs:   Math.round((acc.carbs   + x.carbs)   * 10) / 10,
+    fat:     Math.round((acc.fat     + x.fat)     * 10) / 10,
+  }), { cal: 0, protein: 0, carbs: 0, fat: 0 })
+
+  const logAll = () => {
+    if (basket.length === 0) return
+    onAdd(basket)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-display font-bold text-white">
+          {selected ? 'Set quantity' : 'Log meal'}
+        </h3>
+        {selected && (
+          <button onClick={() => { setSelected(null); setGrams('100') }}
+            className="text-xs text-zinc-400 hover:text-zinc-200 transition px-2 py-1 rounded-lg bg-white/5">
+            ← Back
+          </button>
+        )}
+      </div>
+
+      {/* Tab toggle — only when not in the quantity-picker step */}
+      {!selected && (
+        <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+          <button onClick={() => setTab('search')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${tab === 'search' ? 'bg-[#d7ff3a] text-black' : 'text-zinc-400 hover:text-zinc-200'}`}>
+            Search DB
+          </button>
+          <button onClick={() => setTab('manual')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${tab === 'manual' ? 'bg-[#d7ff3a] text-black' : 'text-zinc-400 hover:text-zinc-200'}`}>
+            Enter manually
+          </button>
+        </div>
+      )}
+
+      {/* Basket */}
+      {basket.length > 0 && !selected && (
+        <div className="space-y-1.5">
+          {basket.map(item => (
+            <div key={item.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/[0.07]">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-zinc-100 truncate">{item.name}</div>
+                <div className="text-[10px] text-zinc-500 tabular-nums">{item.label || `${item.grams}g`} · {item.cal} kcal</div>
+              </div>
+              <button onClick={() => removeFromBasket(item.id)} className="ml-3 text-zinc-600 hover:text-[#f87171] transition text-lg leading-none">×</button>
+            </div>
+          ))}
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#d7ff3a]/5 border border-[#d7ff3a]/20">
+            <span className="text-xs font-semibold text-[#d7ff3a]">Total ({basket.length} items)</span>
+            <span className="text-xs tabular-nums text-zinc-300">
+              {total.cal} kcal · P{total.protein}g · C{total.carbs}g · F{total.fat}g
+            </span>
+          </div>
+        </div>
+      )}
+
+      {!selected ? (
+        <>
+          {tab === 'search' ? (
+            <>
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder={basket.length > 0 ? 'Add another item…' : 'Search dal makhani, pasta, banana…'}
+                className="w-full px-3.5 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-[#d7ff3a]/50 transition"
+              />
+
+              {query.trim().length === 0 && basket.length === 0 && (
+                <p className="text-xs text-zinc-500 text-center py-2">Type a food name to search</p>
+              )}
+
+              {(localResults.length > 0 || offResults.length > 0) && (
+                <div className="space-y-1.5 max-h-56 overflow-y-auto no-scrollbar">
+                  {localResults.length > 0 && (
+                    <>
+                      <div className="px-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">My database</div>
+                      {localResults.map(f => (
+                        <button key={f.id} onClick={() => { setSelected(f); setGrams('100') }}
+                          className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/5 border border-white/[0.07] hover:bg-white/10 active:scale-[0.98] transition text-left"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-zinc-100 truncate">{f.name}</div>
+                            <div className="text-[10px] text-zinc-500 mt-0.5">{f.category} · per 100g</div>
+                          </div>
+                          <div className="shrink-0 text-right ml-3">
+                            <div className="text-sm font-semibold text-[#d7ff3a] tabular-nums">{f.cal} kcal</div>
+                            <div className="text-[10px] text-zinc-500 tabular-nums">P{f.protein} C{f.carbs} F{f.fat}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {offResults.length > 0 && (
+                    <>
+                      <div className="px-1 pt-1 text-[10px] font-semibold text-[#22d3ee] uppercase tracking-wider">🌐 Online (Open Food Facts)</div>
+                      {offResults.map(f => (
+                        <button key={f.id} onClick={() => { setSelected(f); setGrams('100') }}
+                          className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-[#22d3ee]/5 border border-[#22d3ee]/10 hover:bg-[#22d3ee]/10 active:scale-[0.98] transition text-left"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-zinc-100 truncate">{f.name}</div>
+                            <div className="text-[10px] text-zinc-500 mt-0.5">{f.category} · per 100g</div>
+                          </div>
+                          <div className="shrink-0 text-right ml-3">
+                            <div className="text-sm font-semibold text-[#d7ff3a] tabular-nums">{f.cal} kcal</div>
+                            <div className="text-[10px] text-zinc-500 tabular-nums">P{f.protein} C{f.carbs} F{f.fat}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {offLoading && <p className="text-xs text-zinc-500 text-center py-1 animate-pulse">Searching online…</p>}
+              {query.trim().length >= 3 && !offLoading && allResults.length === 0 && (
+                <p className="text-xs text-zinc-500 text-center py-2">No results found. Try a different name.</p>
+              )}
+            </>
+          ) : (
+            /* Manual entry */
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={manual.name}
+                onChange={e => setManual(m => ({ ...m, name: e.target.value }))}
+                placeholder="Food name (e.g. Home-made poha)"
+                className="w-full px-3.5 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-[#d7ff3a]/50 transition"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'cal',     label: 'Calories (kcal)', color: '#d7ff3a' },
+                  { key: 'protein', label: 'Protein (g)',     color: '#22d3ee' },
+                  { key: 'carbs',   label: 'Carbs (g)',       color: '#fbbf24' },
+                  { key: 'fat',     label: 'Fat (g)',         color: '#a78bfa' },
+                ].map(({ key, label, color }) => (
+                  <div key={key}>
+                    <label className="block text-[10px] mb-1 font-medium" style={{ color }}>{label}</label>
+                    <input
+                      type="number" min={0}
+                      value={manual[key]}
+                      onChange={e => setManual(m => ({ ...m, [key]: e.target.value }))}
+                      placeholder="0"
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#d7ff3a]/50 transition tabular-nums"
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={addManualToBasket}
+                disabled={!manual.name.trim()}
+                className="w-full py-2.5 rounded-xl bg-white/10 border border-white/10 text-zinc-200 text-sm font-semibold hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                + Add to meal
+              </button>
+            </div>
+          )}
+
+          {basket.length > 0 && (
+            <div className="flex gap-2 pt-1">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 text-sm hover:bg-white/5 transition">Cancel</button>
+              <button onClick={logAll} className="flex-1 py-2.5 rounded-xl bg-[#d7ff3a] text-black text-sm font-semibold hover:bg-[#c6ee29] transition">
+                Log meal ({basket.length})
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-4">
+          <div className="px-4 py-3 rounded-2xl bg-white/5 border border-white/[0.07]">
+            <div className="text-base font-semibold text-white">{selected.name}</div>
+            <div className="text-xs text-zinc-500 mt-0.5">{selected.category}</div>
+          </div>
+
+          {/* Mode toggle — only shown for piece-countable foods */}
+          {hasPieces && (
+            <div className="flex gap-1.5 p-1 bg-white/5 rounded-xl">
+              <button onClick={() => setMode('pieces')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${mode === 'pieces' ? 'bg-[#d7ff3a] text-black' : 'text-zinc-400 hover:text-zinc-200'}`}>
+                By piece
+              </button>
+              <button onClick={() => setMode('grams')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${mode === 'grams' ? 'bg-[#d7ff3a] text-black' : 'text-zinc-400 hover:text-zinc-200'}`}>
+                By grams
+              </button>
+            </div>
+          )}
+
+          {mode === 'pieces' && hasPieces ? (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-zinc-400 font-medium">How many {selected.serving.label}s?</label>
+                <span className="text-[10px] text-zinc-500 tabular-nums">= {gramsVal}g</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setQty(q => String(Math.max(1, (Number(q) || 1) - 1)))}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-200 text-xl hover:bg-white/10 active:scale-95 transition flex items-center justify-center">−</button>
+                <input type="number" value={qty} onChange={e => setQty(e.target.value)} min={1}
+                  className="flex-1 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-center text-lg font-bold text-zinc-100 focus:outline-none focus:border-[#d7ff3a]/50 transition tabular-nums" />
+                <button onClick={() => setQty(q => String((Number(q) || 1) + 1))}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-200 text-xl hover:bg-white/10 active:scale-95 transition flex items-center justify-center">+</button>
+              </div>
+              <div className="flex gap-2 mt-2">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} onClick={() => setQty(String(n))}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${Number(qty) === n ? 'bg-[#d7ff3a] text-black' : 'bg-white/5 text-zinc-400 hover:bg-white/10'}`}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1.5 font-medium">Quantity (grams)</label>
+              <input type="number" value={grams} onChange={e => setGrams(e.target.value)} min={1}
+                className="w-full px-3.5 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-[#d7ff3a]/50 transition tabular-nums" />
+              <div className="flex gap-2 mt-2">
+                {[50, 100, 150, 200, 250].map(g => (
+                  <button key={g} onClick={() => setGrams(String(g))}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${gramsVal === g ? 'bg-[#d7ff3a] text-black' : 'bg-white/5 text-zinc-400 hover:bg-white/10'}`}>
+                    {g}g
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Calories', val: scaled.cal,     unit: 'kcal', color: '#d7ff3a' },
+              { label: 'Protein',  val: scaled.protein, unit: 'g',    color: '#22d3ee' },
+              { label: 'Carbs',    val: scaled.carbs,   unit: 'g',    color: '#fbbf24' },
+              { label: 'Fat',      val: scaled.fat,     unit: 'g',    color: '#a78bfa' },
+            ].map(({ label, val, unit, color }) => (
+              <div key={label} className="flex flex-col items-center py-3 rounded-xl bg-white/5 border border-white/[0.07]">
+                <div className="text-lg font-display font-bold tabular-nums" style={{ color }}>{val}</div>
+                <div className="text-[9px] text-zinc-500 uppercase tracking-wide mt-0.5">{unit}</div>
+                <div className="text-[9px] text-zinc-600 mt-0.5">{label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={() => { setSelected(null); setGrams('100') }}
+              className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 text-sm hover:bg-white/5 transition">
+              ← Back
+            </button>
+            <button onClick={addToBasket}
+              className="flex-1 py-2.5 rounded-xl bg-[#d7ff3a] text-black text-sm font-semibold hover:bg-[#c6ee29] transition">
+              Add to meal
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------------------
    Activity card — planned workout for the day + ad-hoc workouts
 --------------------------------------------------------------------------- */
 const intensityColor = (k) => INTENSITY_OPTS.find(i => i.key === k)?.color || '#a1a1aa'
@@ -775,8 +1164,8 @@ const ActivityCard = ({ dayKey, dayLog, onMarkDone, onSkip, onAddWorkout, onRemo
 const Modal = ({ open, onClose, children }) => {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm overlay-fade" onClick={onClose}>
-      <div className="glass w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl shadow-black/50 sheet-slide-up" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm overlay-fade" onClick={onClose}>
+      <div className="glass w-full max-w-md mx-4 rounded-3xl p-5 max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl shadow-black/50 sheet-slide-up" onClick={e => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -959,6 +1348,54 @@ const WaterModal = ({ water, target, onAdd, onClose }) => {
 }
 
 /* ---------------------------------------------------------------------------
+   Cheat Day card
+--------------------------------------------------------------------------- */
+const CHEAT_TIPS = [
+  { icon: '💧', text: 'Stay hydrated — aim for 3L water today. Junk food is high in sodium.' },
+  { icon: '🥩', text: 'Front-load protein earlier in the day so you don\'t end up near zero by dinner.' },
+  { icon: '🚶', text: 'A short 20-min walk after meals helps digestion and limits fat storage.' },
+  { icon: '🍕', text: 'Whole foods first — pizza over chips, ice cream over soda. Enjoy real food.' },
+  { icon: '🌙', text: 'Try to wrap up eating by 10 PM. Late-night binges are harder to recover from.' },
+  { icon: '🏋️', text: 'Don\'t skip your workout — the extra carbs today will fuel a great session.' },
+  { icon: '🧘', text: 'Eat slowly and savour every bite. Mindful eating means you\'ll need less to feel satisfied.' },
+  { icon: '✅', text: 'One cheat day won\'t derail your progress. Just get back on plan tomorrow — no guilt.' },
+  { icon: '🥤', text: 'Avoid liquid calories (sodas, juices, cocktails) — they add up invisibly fast.' },
+  { icon: '😴', text: 'Good sleep tonight will reset hunger hormones and make tomorrow\'s clean eating easier.' },
+]
+
+const CheatDayCard = ({ onToggleOff }) => {
+  const tips = useMemo(() => {
+    const shuffled = [...CHEAT_TIPS].sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 3)
+  }, [])
+  return (
+    <div className="rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a1400 0%, #1f1a00 100%)', border: '1px solid rgba(251,191,36,0.25)' }}>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-2xl font-display font-black text-[#fbbf24] tracking-tight">Cheat Day 🍕</div>
+            <div className="text-sm text-amber-300/70 mt-0.5">Goals paused — enjoy guilt-free</div>
+          </div>
+          <button onClick={onToggleOff}
+            className="shrink-0 px-3 py-1.5 rounded-xl border border-amber-500/30 text-amber-400 text-xs font-semibold hover:bg-amber-500/10 transition">
+            Undo
+          </button>
+        </div>
+        <div className="mt-4 space-y-2.5">
+          <div className="text-[10px] font-semibold text-amber-500/60 uppercase tracking-widest">Tips for today</div>
+          {tips.map((tip, i) => (
+            <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+              <span className="text-lg leading-none shrink-0 mt-0.5">{tip.icon}</span>
+              <span className="text-sm text-amber-100/80 leading-snug">{tip.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------------------
    Hero macro dashboard — big calorie ring + 3 satellite rings (streak moved to bento)
 --------------------------------------------------------------------------- */
 const HeroMacroCard = ({ planned, logged, targets }) => {
@@ -1028,7 +1465,7 @@ const HeroMacroCard = ({ planned, logged, targets }) => {
 /* ---------------------------------------------------------------------------
    Today / Daily View
 --------------------------------------------------------------------------- */
-const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger, openChooser, profile, weights, setWeights }) => {
+const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger, openChooser, profile, weights, setWeights, onOpenWater, onOpenWeight }) => {
   const dayKey = isoToDayKey(date)
   const plan = WEEK_PLAN[dayKey]
   const dayLog = logs[date] || { meals: [], water: 0 }
@@ -1053,19 +1490,21 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
       return { ...prev, [date]: { ...day, meals: day.meals.filter(x => x.mealId !== mealId) } }
     })
   }
-
-  const addWater = (delta) => {
+  const clearGroup = (mealIds) => {
     setLogs(prev => {
-      const day = prev[date] || { meals: [], water: 0 }
-      const next = Math.max(0, (day.water || 0) + delta)
-      return { ...prev, [date]: { ...day, water: next } }
+      const day = prev[date]
+      if (!day) return prev
+      return { ...prev, [date]: { ...day, meals: day.meals.filter(x => !mealIds.includes(x.mealId)) } }
     })
   }
 
   const water = dayLog.water || 0
+  const isCheatDay = !!dayLog.cheatDay
+  const toggleCheatDay = () => setLogs(prev => {
+    const day = prev[date] || { meals: [], water: 0 }
+    return { ...prev, [date]: { ...day, cheatDay: !day.cheatDay } }
+  })
   const streak = useMemo(() => computeProteinStreak(logs, t.protein.min), [logs, t.protein.min])
-  const [waterOpen, setWaterOpen] = useState(false)
-  const [weightOpen, setWeightOpen] = useState(false)
 
   return (
     <div className="space-y-4 pb-32">
@@ -1090,6 +1529,10 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
             className="flex-1 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-[#d7ff3a]/50 transition"
           />
           <button onClick={() => setDate(todayISO())} className="px-4 py-2.5 text-xs rounded-xl bg-[#d7ff3a] text-black font-semibold hover:bg-[#c6ee29] active:scale-95 transition">Today</button>
+          <button onClick={toggleCheatDay}
+            className={`px-3 py-2.5 text-xs rounded-xl font-semibold active:scale-95 transition ${isCheatDay ? 'bg-[#fbbf24] text-black' : 'border border-white/10 text-zinc-400 hover:bg-white/5'}`}>
+            🍕
+          </button>
         </div>
       </Card>
 
@@ -1113,8 +1556,8 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
         water={water}
         waterTarget={profile.waterTarget}
         profileWeight={profile.weight}
-        onOpenWeight={() => setWeightOpen(true)}
-        onOpenWater={() => setWaterOpen(true)}
+        onOpenWeight={onOpenWeight}
+        onOpenWater={onOpenWater}
       />
 
       {/* Activity card — planned workout + ad-hoc */}
@@ -1141,12 +1584,11 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
         onRemoveWorkout={(id) => setLogs(prev => removeWorkoutById(prev, date, id))}
       />
 
-      {/* Hero macro dashboard — calorie ring + 3 satellites */}
-      <HeroMacroCard
-        planned={planned}
-        logged={logged}
-        targets={t}
-      />
+      {/* Hero macro dashboard — calorie ring + 3 satellites, or cheat day card */}
+      {isCheatDay
+        ? <CheatDayCard onToggleOff={toggleCheatDay} />
+        : <HeroMacroCard planned={planned} logged={logged} targets={t} />
+      }
 
       {/* Meal timeline */}
       <div className="space-y-2">
@@ -1167,35 +1609,50 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
             />
           )
         })}
-        {/* Extra logged items */}
-        {dayLog.meals.filter(x => x.status === 'extra').map((x, i) => (
-          <Card key={`extra-${i}`} className="p-3.5 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#fbbf24]" style={{ boxShadow: '0 0 14px #fbbf2466' }} />
-            <div className="flex items-start gap-3">
-              <div className="text-2xl shrink-0 w-10 h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center">➕</div>
-              <div className="flex-1">
-                <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Extra · Snack</div>
-                <div className="font-medium text-zinc-100 mt-0.5">{x.loggedFood}</div>
-                <div className="mt-2 grid grid-cols-4 gap-1.5 text-center text-xs">
-                  <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">kcal</div><div className="font-semibold text-zinc-200 tabular-nums">{x.calories}</div></div>
-                  <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">P</div><div className="font-semibold text-zinc-200 tabular-nums">{x.protein}g</div></div>
-                  <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">C</div><div className="font-semibold text-zinc-200 tabular-nums">{x.carbs}g</div></div>
-                  <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">F</div><div className="font-semibold text-zinc-200 tabular-nums">{x.fat}g</div></div>
+        {/* Extra logged items — grouped by session */}
+        {(() => {
+          const extras = dayLog.meals.filter(x => x.status === 'extra')
+          const groups = []
+          const seen = new Set()
+          extras.forEach(item => {
+            if (!item.groupId) { groups.push([item]); return }
+            if (!seen.has(item.groupId)) {
+              seen.add(item.groupId)
+              groups.push(extras.filter(x => x.groupId === item.groupId))
+            }
+          })
+          return groups.map((group, i) => {
+            const mealName = group.map(x => x.displayName || x.loggedFood).join(' + ')
+            const tot = group.reduce((acc, x) => ({
+              calories: acc.calories + (Number(x.calories) || 0),
+              protein:  Math.round((acc.protein + (Number(x.protein) || 0)) * 10) / 10,
+              carbs:    Math.round((acc.carbs   + (Number(x.carbs)   || 0)) * 10) / 10,
+              fat:      Math.round((acc.fat     + (Number(x.fat)     || 0)) * 10) / 10,
+            }), { calories: 0, protein: 0, carbs: 0, fat: 0 })
+            const handleRemove = () => clearGroup(group.map(x => x.mealId))
+            return (
+              <Card key={`extra-group-${i}`} className="p-3.5 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#fbbf24]" style={{ boxShadow: '0 0 14px #fbbf2466' }} />
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-10 h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-xl">➕</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Quick Log</div>
+                    <div className="font-medium text-zinc-100 mt-0.5 leading-snug">{mealName}</div>
+                    <div className="mt-2 grid grid-cols-4 gap-1.5 text-center text-xs">
+                      <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">kcal</div><div className="font-semibold text-zinc-200 tabular-nums">{tot.calories}</div></div>
+                      <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">P</div><div className="font-semibold text-zinc-200 tabular-nums">{tot.protein}g</div></div>
+                      <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">C</div><div className="font-semibold text-zinc-200 tabular-nums">{tot.carbs}g</div></div>
+                      <div className="rounded-xl bg-white/[0.04] border border-white/[0.04] py-1.5"><div className="text-[9px] text-zinc-500 uppercase tracking-wider">F</div><div className="font-semibold text-zinc-200 tabular-nums">{tot.fat}g</div></div>
+                    </div>
+                  </div>
+                  <button onClick={handleRemove} className="text-xs text-[#f87171]/80 hover:text-[#f87171] transition shrink-0">Remove</button>
                 </div>
-              </div>
-              <button onClick={() => clear(x.mealId)} className="text-xs text-[#f87171]/80 hover:text-[#f87171] transition">Remove</button>
-            </div>
-          </Card>
-        ))}
+              </Card>
+            )
+          })
+        })()}
       </div>
 
-      {/* Water + Weight live in modals now (entry points: bento tiles above) */}
-      <Modal open={waterOpen} onClose={() => setWaterOpen(false)}>
-        {waterOpen && <WaterModal water={water} target={profile.waterTarget} onAdd={addWater} onClose={() => setWaterOpen(false)} />}
-      </Modal>
-      <Modal open={weightOpen} onClose={() => setWeightOpen(false)}>
-        {weightOpen && <WeightInputCard weights={weights} setWeights={setWeights} currentWeight={profile.weight} />}
-      </Modal>
     </div>
   )
 }
@@ -1211,10 +1668,12 @@ const CHART_MACROS = [
   { key: 'fat',      label: 'Fat',      unit: 'g',    plannedField: 'plannedFat',     loggedField: 'loggedFat',     loggedColor: '#a78bfa', targetKey: 'fat'      }
 ]
 
-const SummaryView = ({ date, logs, profile, weights, setWeights }) => {
+const SummaryView = ({ logs, profile, weights, setWeights }) => {
   const [chartMacro, setChartMacro] = useState('calories')
+  const [weekOffset, setWeekOffset] = useState(0) // 0 = current week, -1 = last week, etc.
   const t = profile.targets
-  const weekStart = startOfWeekISO(date)
+  const weekStart = addDays(startOfWeekISO(todayISO()), weekOffset * 7)
+  const isCurrentWeek = weekOffset === 0
   const days = DAY_KEYS.map((k, i) => ({ key: k, iso: addDays(weekStart, i) }))
 
   const data = days.map(({ key, iso }) => {
@@ -1250,8 +1709,32 @@ const SummaryView = ({ date, logs, profile, weights, setWeights }) => {
   return (
     <div className="space-y-3 pb-32">
       <Card className="p-3.5">
-        <div className="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">Weekly Summary</div>
-        <div className="text-lg font-display font-bold text-white">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">Weekly Summary</div>
+            <div className="text-lg font-display font-bold text-white">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</div>
+            {!isCurrentWeek && (
+              <div className="text-[10px] text-zinc-500 mt-0.5">{Math.abs(weekOffset)} week{Math.abs(weekOffset) > 1 ? 's' : ''} ago</div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setWeekOffset(o => o - 1)}
+              className="w-9 h-9 rounded-xl border border-white/10 text-zinc-300 hover:bg-white/5 active:scale-95 transition flex items-center justify-center">
+              <ChevronLeft size={18} strokeWidth={2.2} />
+            </button>
+            <button onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
+              disabled={isCurrentWeek}
+              className="w-9 h-9 rounded-xl border border-white/10 text-zinc-300 hover:bg-white/5 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center">
+              <ChevronRight size={18} strokeWidth={2.2} />
+            </button>
+            {!isCurrentWeek && (
+              <button onClick={() => setWeekOffset(0)}
+                className="px-3 h-9 rounded-xl bg-[#d7ff3a] text-black text-xs font-semibold hover:bg-[#c6ee29] active:scale-95 transition">
+                Now
+              </button>
+            )}
+          </div>
+        </div>
       </Card>
 
       <Card className="p-3.5">
@@ -1282,7 +1765,7 @@ const SummaryView = ({ date, logs, profile, weights, setWeights }) => {
             <BarChart data={data} margin={{ top: 16, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#71717a' }} stroke="rgba(255,255,255,0.1)" />
-              <YAxis tick={{ fontSize: 11, fill: '#71717a' }} stroke="rgba(255,255,255,0.1)" domain={[0, (dataMax) => Math.max(dataMax, t[macroCfg.targetKey].max) * 1.1]} />
+              <YAxis tick={{ fontSize: 11, fill: '#71717a' }} stroke="rgba(255,255,255,0.1)" domain={[0, Math.ceil(Math.max(...data.map(d => Math.max(d[macroCfg.plannedField] || 0, d[macroCfg.loggedField] || 0)), t[macroCfg.targetKey].max) * 1.15)]} />
               <Tooltip formatter={(v) => `${Math.round(v)} ${macroCfg.unit}`} contentStyle={tooltipStyle} labelStyle={{ color: '#a1a1aa' }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
               <Legend wrapperStyle={{ fontSize: 11, color: '#a1a1aa' }} />
               <ReferenceArea
@@ -1723,6 +2206,9 @@ export default function App() {
   const [confettiKey, setConfettiKey] = useState(0)
   const [chooserOpen, setChooserOpen] = useState(false)
   const [workoutLogger, setWorkoutLogger] = useState(null) // { date, workoutId?, planned, initial?, prefill? }
+  const [waterOpen, setWaterOpen] = useState(false)
+  const [weightOpen, setWeightOpen] = useState(false)
+  const [foodSearchOpen, setFoodSearchOpen] = useState(false)
 
   // Per-date snapshot of last-seen totals. We only celebrate when totals
   // *transition* from below to at-or-above a target — so reloading the page
@@ -1832,6 +2318,24 @@ export default function App() {
     setLogger(null)
   }
 
+  const logFoodDirect = (items) => {
+    const arr = Array.isArray(items) ? items : [items]
+    const groupId = arr.length > 1 ? `group-${Date.now()}` : undefined
+    setLogs(prev => arr.reduce((acc, { name, displayName, cal, protein, carbs, fat }) =>
+      upsertMealLog(acc, date, {
+        mealId: `extra-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        status: 'extra',
+        loggedFood: name,
+        displayName: displayName || name,
+        calories: cal,
+        protein, carbs, fat,
+        ...(groupId ? { groupId } : {}),
+      }), prev))
+    setFoodSearchOpen(false)
+    setChooserOpen(false)
+    flash(arr.length > 1 ? `✅ ${arr.length} items logged` : `✅ ${arr[0].name} logged`)
+  }
+
   const openWorkoutLogger = (payload) => setWorkoutLogger(payload)
 
   const submitWorkout = (form) => {
@@ -1850,8 +2354,17 @@ export default function App() {
     setWorkoutLogger(null)
   }
 
+  const addWater = (delta) => {
+    setLogs(prev => {
+      const day = prev[date] || { meals: [], water: 0 }
+      const next = Math.max(0, (day.water || 0) + delta)
+      return { ...prev, [date]: { ...day, water: next } }
+    })
+  }
+
   const dayKey = isoToDayKey(date)
   const existingLog = logger ? findLogForMeal(logs, date, logger.mealId) : null
+  const water = (logs[date] || {}).water || 0
 
   return (
     <div className="min-h-full max-w-md mx-auto">
@@ -1881,8 +2394,8 @@ export default function App() {
 
       <main className="p-3">
         <div key={tab} className="page-enter">
-          {tab === 'today'  && <TodayView   date={date} setDate={setDate} logs={logs} setLogs={setLogs} openLogger={openLogger} openWorkoutLogger={openWorkoutLogger} openChooser={() => setChooserOpen(true)} profile={profile} weights={weights} setWeights={setWeights} />}
-          {tab === 'log'    && <SummaryView date={date} logs={logs} profile={profile} weights={weights} setWeights={setWeights} />}
+          {tab === 'today'  && <TodayView   date={date} setDate={setDate} logs={logs} setLogs={setLogs} openLogger={openLogger} openWorkoutLogger={openWorkoutLogger} openChooser={() => setChooserOpen(true)} profile={profile} weights={weights} setWeights={setWeights} onOpenWater={() => setWaterOpen(true)} onOpenWeight={() => setWeightOpen(true)} />}
+          {tab === 'log'    && <SummaryView logs={logs} profile={profile} weights={weights} setWeights={setWeights} />}
           {tab === 'snacks' && <SnacksView  date={date} setLogs={setLogs} flash={flash} />}
         </div>
       </main>
@@ -1920,7 +2433,7 @@ export default function App() {
           <LogChooser
             onPickFood={() => {
               setChooserOpen(false)
-              setLogger({ mealId: `extra-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, mealName: '', extra: true })
+              setFoodSearchOpen(true)
             }}
             onPickWorkout={() => {
               setChooserOpen(false)
@@ -1928,6 +2441,11 @@ export default function App() {
             }}
           />
         )}
+      </Modal>
+
+      {/* Food search modal */}
+      <Modal open={foodSearchOpen} onClose={() => setFoodSearchOpen(false)}>
+        {foodSearchOpen && <FoodSearchModal onAdd={logFoodDirect} onClose={() => setFoodSearchOpen(false)} />}
       </Modal>
 
       {/* Workout logger modal */}
@@ -1941,6 +2459,16 @@ export default function App() {
             onCancel={() => setWorkoutLogger(null)}
           />
         )}
+      </Modal>
+
+      {/* Water modal */}
+      <Modal open={waterOpen} onClose={() => setWaterOpen(false)}>
+        {waterOpen && <WaterModal water={water} target={profile.waterTarget} onAdd={addWater} onClose={() => setWaterOpen(false)} />}
+      </Modal>
+
+      {/* Weight modal */}
+      <Modal open={weightOpen} onClose={() => setWeightOpen(false)}>
+        {weightOpen && <WeightInputCard weights={weights} setWeights={setWeights} currentWeight={profile.weight} />}
       </Modal>
 
       {/* Settings modal */}

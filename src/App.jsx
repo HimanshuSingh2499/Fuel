@@ -1580,7 +1580,7 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
   const streak = useMemo(() => computeProteinStreak(logs, t.protein.min), [logs, t.protein.min])
 
   return (
-    <div className="space-y-4 pb-32">
+    <div className="space-y-4 pb-fab">
       {/* Date picker strip */}
       <Card className="p-3.5">
         <div className="flex items-center justify-between">
@@ -1791,7 +1791,7 @@ const SummaryView = ({ logs, profile, weights, setWeights }) => {
 
   const tooltipStyle = { background: '#16161c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }
   return (
-    <div className="space-y-3 pb-32">
+    <div className="space-y-3 pb-fab">
       <Card className="p-3.5">
         <div className="flex items-center justify-between">
           <div>
@@ -1945,7 +1945,7 @@ const SnacksView = ({ date, setLogs, flash }) => {
   }
 
   return (
-    <div className="space-y-4 pb-32">
+    <div className="space-y-4 pb-fab">
       <Card className="p-3.5">
         <div className="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">Snacks</div>
         <div className="text-sm text-zinc-300">Tap <span className="text-[#d7ff3a] font-semibold">+ Add</span> to log directly.</div>
@@ -2540,7 +2540,7 @@ export default function App() {
   return (
     <div className="min-h-full max-w-md mx-auto">
       {/* Header */}
-      <header className="glass border-b border-white/5 px-4 py-3 sticky top-0 z-20">
+      <header className="glass border-b border-white/5 px-4 pb-3 header-safe sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-widest font-semibold text-zinc-500 flex items-center gap-1.5">

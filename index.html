@@ -114,9 +114,11 @@
       .tab-pop { animation: tabPop 240ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
       /* iPhone safe-area — keeps nav/FAB above home indicator */
-      .nav-safe   { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
-      .fab-safe   { bottom: calc(96px   + env(safe-area-inset-bottom, 0px)); }
-      .toast-safe { bottom: calc(160px  + env(safe-area-inset-bottom, 0px)); }
+      .nav-safe    { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+      .fab-safe    { bottom: calc(96px   + env(safe-area-inset-bottom, 0px)); }
+      .toast-safe  { bottom: calc(160px  + env(safe-area-inset-bottom, 0px)); }
+      .header-safe { padding-top: calc(0.75rem + env(safe-area-inset-top, 0px)); }
+      .pb-fab      { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
 
       /* Respect reduced-motion preference */
       @media (prefers-reduced-motion: reduce) {

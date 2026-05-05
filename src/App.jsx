@@ -1164,8 +1164,16 @@ const ActivityCard = ({ dayKey, dayLog, onMarkDone, onSkip, onAddWorkout, onRemo
 const Modal = ({ open, onClose, children }) => {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm overlay-fade" onClick={onClose}>
-      <div className="glass w-full max-w-md mx-4 rounded-3xl p-5 max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl shadow-black/50 sheet-slide-up" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm overlay-fade"
+      style={{ top: 0, left: 0, right: 0, bottom: 0, height: '100dvh' }}
+      onClick={onClose}
+    >
+      <div
+        className="glass w-full max-w-md mx-4 rounded-3xl p-5 border border-white/10 shadow-2xl shadow-black/50 sheet-slide-up overflow-y-auto"
+        style={{ maxHeight: '85dvh' }}
+        onClick={e => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>

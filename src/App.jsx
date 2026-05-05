@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { FOODS } from './foods.js'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -1163,7 +1164,7 @@ const ActivityCard = ({ dayKey, dayLog, onMarkDone, onSkip, onAddWorkout, onRemo
 
 const Modal = ({ open, onClose, children }) => {
   if (!open) return null
-  return (
+  return createPortal(
     <div
       className="fixed z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm overlay-fade"
       style={{ top: 0, left: 0, right: 0, bottom: 0, height: '100dvh' }}
@@ -1176,7 +1177,8 @@ const Modal = ({ open, onClose, children }) => {
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

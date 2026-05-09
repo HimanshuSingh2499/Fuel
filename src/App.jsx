@@ -836,11 +836,14 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageBase64: base64, mediaType: 'image/jpeg' })
         })
-        if (!res.ok) throw new Error('API error')
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}))
+          throw new Error(errBody.error || `HTTP ${res.status}`)
+        }
         const data = await res.json()
         setScanResult(data)
-      } catch {
-        setScanError('Could not analyse the photo. Please try again or enter manually.')
+      } catch (err) {
+        setScanError(`Could not analyse the photo: ${err.message}`)
       } finally {
         setScanLoading(false)
       }

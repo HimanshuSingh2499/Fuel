@@ -689,14 +689,19 @@ const LogChooser = ({ onPickFood, onPickWorkout }) => (
    Food search modal — local DB first, Open Food Facts fallback
 --------------------------------------------------------------------------- */
 const FoodSearchModal = ({ onAdd, onClose }) => {
-  const [tab, setTab] = useState('search') // 'search' | 'manual'
+  const [tab, setTab] = useState('search') // 'search' | 'manual' | 'scan'
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(null)
   const [grams, setGrams] = useState('100')
   const [offResults, setOffResults] = useState([])
   const [offLoading, setOffLoading] = useState(false)
-  const [basket, setBasket] = useState([]) // [{ id, name, grams, cal, protein, carbs, fat }]
+  const [basket, setBasket] = useState([])
   const [manual, setManual] = useState({ name: '', cal: '', protein: '', carbs: '', fat: '' })
+  const [scanLoading, setScanLoading] = useState(false)
+  const [scanResult, setScanResult] = useState(null)
+  const [scanError, setScanError] = useState('')
+  const [scanPreview, setScanPreview] = useState(null)
+  const cameraRef = useRef(null)
   const debounceRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -806,6 +811,53 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
     setManual({ name: '', cal: '', protein: '', carbs: '', fat: '' })
   }
 
+  const handlePhoto = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setScanResult(null)
+    setScanError('')
+    setScanPreview(URL.createObjectURL(file))
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      const base64 = ev.target.result.split(',')[1]
+      setScanLoading(true)
+      try {
+        const res = await fetch('/api/analyze-meal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
+        })
+        if (!res.ok) throw new Error('API error')
+        const data = await res.json()
+        setScanResult(data)
+      } catch {
+        setScanError('Could not analyse the photo. Please try again or enter manually.')
+      } finally {
+        setScanLoading(false)
+      }
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const addScanToBasket = () => {
+    if (!scanResult) return
+    setBasket(b => [...b, {
+      id: `scan-${Date.now()}`,
+      name: scanResult.name,
+      displayName: scanResult.name,
+      label: 'photo',
+      grams: 0,
+      cal:     scanResult.cal     || 0,
+      protein: scanResult.protein || 0,
+      carbs:   scanResult.carbs   || 0,
+      fat:     scanResult.fat     || 0,
+    }])
+    setScanResult(null)
+    setScanPreview(null)
+    setTab('search')
+  }
+
   const removeFromBasket = (id) => setBasket(b => b.filter(x => x.id !== id))
 
   const total = basket.reduce((acc, x) => ({
@@ -843,7 +895,11 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
           </button>
           <button onClick={() => setTab('manual')}
             className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${tab === 'manual' ? 'bg-[#d7ff3a] text-black' : 'text-zinc-400 hover:text-zinc-200'}`}>
-            Enter manually
+            Manual
+          </button>
+          <button onClick={() => setTab('scan')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${tab === 'scan' ? 'bg-[#d7ff3a] text-black' : 'text-zinc-400 hover:text-zinc-200'}`}>
+            📷 Scan
           </button>
         </div>
       )}
@@ -871,7 +927,7 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
 
       {!selected ? (
         <>
-          {tab === 'search' ? (
+          {tab === 'search' && (
             <>
               <input
                 ref={inputRef}
@@ -934,8 +990,9 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
                 <p className="text-xs text-zinc-500 text-center py-2">No results found. Try a different name.</p>
               )}
             </>
-          ) : (
-            /* Manual entry */
+          )}
+
+          {tab === 'manual' && (
             <div className="space-y-3">
               <input
                 type="text"
@@ -970,6 +1027,106 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
               >
                 + Add to meal
               </button>
+            </div>
+          )}
+
+          {tab === 'scan' && (
+            <div className="space-y-4">
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhoto}
+              />
+
+              {/* Idle state — no preview yet */}
+              {!scanPreview && !scanLoading && (
+                <div className="flex flex-col items-center gap-4 py-4">
+                  <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-4xl">📷</div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-zinc-200">Take a photo of your meal</p>
+                    <p className="text-xs text-zinc-500 mt-1">Claude will estimate the calories and macros</p>
+                  </div>
+                  <button
+                    onClick={() => cameraRef.current?.click()}
+                    className="px-6 py-2.5 rounded-xl bg-[#d7ff3a] text-black text-sm font-semibold hover:bg-[#c6ee29] transition"
+                  >
+                    Open camera / gallery
+                  </button>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {scanLoading && (
+                <div className="flex flex-col items-center gap-3 py-6">
+                  {scanPreview && (
+                    <img src={scanPreview} alt="meal" className="w-full max-h-48 object-cover rounded-2xl opacity-60" />
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-zinc-400 animate-pulse">
+                    <span className="text-lg">✨</span> Analysing your meal…
+                  </div>
+                </div>
+              )}
+
+              {/* Result state */}
+              {scanResult && !scanLoading && (
+                <div className="space-y-3">
+                  {scanPreview && (
+                    <img src={scanPreview} alt="meal" className="w-full max-h-40 object-cover rounded-2xl" />
+                  )}
+                  <div className="px-4 py-3 rounded-2xl bg-white/5 border border-white/[0.07]">
+                    <div className="text-sm font-semibold text-zinc-100">{scanResult.name}</div>
+                    {scanResult.breakdown && (
+                      <div className="text-xs text-zinc-500 mt-1 leading-relaxed">{scanResult.breakdown}</div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: 'Cal',     value: scanResult.cal,     unit: 'kcal', color: '#d7ff3a' },
+                      { label: 'Protein', value: scanResult.protein, unit: 'g',    color: '#22d3ee' },
+                      { label: 'Carbs',   value: scanResult.carbs,   unit: 'g',    color: '#fbbf24' },
+                      { label: 'Fat',     value: scanResult.fat,     unit: 'g',    color: '#a78bfa' },
+                    ].map(({ label, value, unit, color }) => (
+                      <div key={label} className="flex flex-col items-center py-2.5 rounded-xl bg-white/5 border border-white/[0.07]">
+                        <span className="text-base font-bold tabular-nums" style={{ color }}>{value}</span>
+                        <span className="text-[9px] text-zinc-500 mt-0.5">{unit}</span>
+                        <span className="text-[9px] text-zinc-600">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setScanResult(null); setScanPreview(null); setScanError('') }}
+                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 text-sm hover:bg-white/5 transition"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={addScanToBasket}
+                      className="flex-1 py-2.5 rounded-xl bg-[#d7ff3a] text-black text-sm font-semibold hover:bg-[#c6ee29] transition"
+                    >
+                      + Add to meal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Error state */}
+              {scanError && !scanLoading && !scanResult && (
+                <div className="space-y-3">
+                  <div className="px-4 py-3 rounded-2xl bg-[#f87171]/10 border border-[#f87171]/20 text-xs text-[#f87171] leading-relaxed">
+                    {scanError}
+                  </div>
+                  <button
+                    onClick={() => { setScanError(''); cameraRef.current?.click() }}
+                    className="w-full py-2.5 rounded-xl bg-white/10 border border-white/10 text-zinc-200 text-sm font-semibold hover:bg-white/15 transition"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

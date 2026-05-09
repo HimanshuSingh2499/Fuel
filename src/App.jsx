@@ -815,18 +815,26 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
   const handlePhoto = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    setScanResult(null)
-    setScanError('')
-    setScanPreview(URL.createObjectURL(file))
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      const base64 = ev.target.result.split(',')[1]
+    const objectUrl = URL.createObjectURL(file)
+    setScanResult(null); setScanError(''); setScanPreview(objectUrl)
+    const img = new Image()
+    img.onload = async () => {
+      const canvas = document.createElement('canvas')
+      const maxDim = 1200
+      let { width, height } = img
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim }
+        else { width = Math.round(width * maxDim / height); height = maxDim }
+      }
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1]
       setScanLoading(true)
       try {
         const res = await fetch('/api/analyze-meal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
+          body: JSON.stringify({ imageBase64: base64, mediaType: 'image/jpeg' })
         })
         if (!res.ok) throw new Error('API error')
         const data = await res.json()
@@ -837,7 +845,8 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
         setScanLoading(false)
       }
     }
-    reader.readAsDataURL(file)
+    img.onerror = () => setScanError('Could not read the photo. Please try a different image.')
+    img.src = objectUrl
     e.target.value = ''
   }
 
@@ -1136,7 +1145,7 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
                     {scanError}
                   </div>
                   <button
-                    onClick={() => { setScanError(''); cameraRef.current?.click() }}
+                    onClick={() => { setScanError(''); setScanPreview(null) }}
                     className="w-full py-2.5 rounded-xl bg-white/10 border border-white/10 text-zinc-200 text-sm font-semibold hover:bg-white/15 transition"
                   >
                     Try again

@@ -1230,11 +1230,16 @@ const MealCard = ({ meal, log, onMarkPlanned, onLogActual, onSkip, onClear, isPa
             {!ate && !showActual && (
               <button onClick={onMarkPlanned} className="text-xs px-3 py-1.5 rounded-xl bg-[#34d399]/15 text-[#34d399] border border-[#34d399]/30 font-semibold hover:bg-[#34d399]/20 active:scale-95 transition">✓ Ate it</button>
             )}
-            <button onClick={onLogActual} className="text-xs px-3 py-1.5 rounded-xl bg-[#d7ff3a] text-black font-semibold hover:bg-[#c6ee29] active:scale-95 transition">
-              {showActual ? 'Edit log' : 'Log actual'}
-            </button>
+            {!ate && (
+              <button onClick={onLogActual} className="text-xs px-3 py-1.5 rounded-xl bg-[#d7ff3a] text-black font-semibold hover:bg-[#c6ee29] active:scale-95 transition">
+                {showActual ? 'Edit log' : 'Log actual'}
+              </button>
+            )}
+            {ate && (
+              <button onClick={onLogActual} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 active:scale-95 transition">Add details</button>
+            )}
             {!skipped && status !== 'planned' && (
-              <button onClick={onClear} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 transition">Clear</button>
+              <button onClick={onClear} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 active:scale-95 transition">Clear</button>
             )}
             {status === 'planned' && (
               <button onClick={onSkip} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-500 hover:bg-white/5 transition">Skip</button>

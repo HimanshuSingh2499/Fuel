@@ -723,22 +723,23 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=6&fields=product_name,nutriments&search_simple=1&action=process`
+          `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&api_key=DEMO_KEY&pageSize=8&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)`
         )
         const data = await res.json()
-        const parsed = (data.products || [])
-          .filter(p => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
-          .slice(0, 5)
-          .map((p, i) => ({
-            id: `off-${i}-${q}`,
-            name: p.product_name,
-            category: 'Open Food Facts',
-            cal:     Math.round(p.nutriments['energy-kcal_100g']     || 0),
-            protein: Math.round((p.nutriments['proteins_100g']        || 0) * 10) / 10,
-            carbs:   Math.round((p.nutriments['carbohydrates_100g']   || 0) * 10) / 10,
-            fat:     Math.round((p.nutriments['fat_100g']             || 0) * 10) / 10,
-            source: 'off',
+        const get = (nutrients, id) => nutrients?.find(n => n.nutrientId === id)?.value || 0
+        const parsed = (data.foods || [])
+          .map((f, i) => ({
+            id: `usda-${f.fdcId || i}`,
+            name: f.description,
+            category: f.foodCategory || 'USDA',
+            cal:     Math.round(get(f.foodNutrients, 1008)),
+            protein: Math.round(get(f.foodNutrients, 1003) * 10) / 10,
+            carbs:   Math.round(get(f.foodNutrients, 1005) * 10) / 10,
+            fat:     Math.round(get(f.foodNutrients, 1004) * 10) / 10,
+            source: 'usda',
           }))
+          .filter(f => f.cal > 0)
+          .slice(0, 6)
         setOffResults(parsed)
       } catch { setOffResults([]) }
       finally { setOffLoading(false) }
@@ -908,7 +909,7 @@ const FoodSearchModal = ({ onAdd, onClose }) => {
                   )}
                   {offResults.length > 0 && (
                     <>
-                      <div className="px-1 pt-1 text-[10px] font-semibold text-[#22d3ee] uppercase tracking-wider">🌐 Online (Open Food Facts)</div>
+                      <div className="px-1 pt-1 text-[10px] font-semibold text-[#22d3ee] uppercase tracking-wider">🌐 Online (USDA FoodData)</div>
                       {offResults.map(f => (
                         <button key={f.id} onClick={() => { setSelected(f); setGrams('100') }}
                           className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-[#22d3ee]/5 border border-[#22d3ee]/10 hover:bg-[#22d3ee]/10 active:scale-[0.98] transition text-left"

@@ -1236,7 +1236,7 @@ const MealCard = ({ meal, log, onMarkPlanned, onLogActual, onSkip, onClear, isPa
               </button>
             )}
             {ate && (
-              <button onClick={onLogActual} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 active:scale-95 transition">Add details</button>
+              <button onClick={onLogActual} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 active:scale-95 transition whitespace-nowrap">Add details</button>
             )}
             {!skipped && status !== 'planned' && (
               <button onClick={onClear} className="text-xs px-3 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 active:scale-95 transition">Clear</button>

@@ -6,21 +6,26 @@ export default async function handler(req, res) {
   const { imageBase64, mediaType } = req.body
   if (!imageBase64 || !mediaType) return res.status(400).json({ error: 'Missing image data' })
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'API key not configured on server' })
+  }
 
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: mediaType, data: imageBase64 }
-        },
-        {
-          type: 'text',
-          text: `You are a nutrition expert. Analyze this meal photo and estimate the nutritional content for the full plate shown.
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: imageBase64 }
+          },
+          {
+            type: 'text',
+            text: `You are a nutrition expert. Analyze this meal photo and estimate the nutritional content for the full plate shown.
 
 Return ONLY a valid JSON object — no explanation, no markdown, just raw JSON:
 {
@@ -36,16 +41,15 @@ Guidelines:
 - Use typical Indian portion sizes if it looks like Indian food
 - Be conservative (slightly underestimate rather than overestimate)
 - If you cannot identify the food clearly, still give your best estimate`
-        }
-      ]
-    }]
-  })
+          }
+        ]
+      }]
+    })
 
-  try {
     const text = message.content[0].text
     const json = JSON.parse(text.match(/\{[\s\S]*\}/)[0])
     res.status(200).json(json)
-  } catch {
-    res.status(500).json({ error: 'Could not parse meal analysis' })
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Unknown server error' })
   }
 }

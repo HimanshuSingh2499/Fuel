@@ -152,6 +152,116 @@ const WEEK_PLAN = {
   ]
 }
 
+const WEEK_PLAN_B = {
+  mon: [
+    m('mon-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Dates (4) + Black Coffee', 110, 1, 26, 0),
+    m('mon-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('mon-bf',   '10:00 AM', 10*60,    'Breakfast', 'Besan Chilla (3 pcs) + Curd (100g)', 400, 24, 42, 12),
+    m('mon-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Chicken Tikka (180g) + 2 Rotis + Raita', 530, 44, 45, 16),
+    m('mon-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Boiled Eggs (2) + Mixed Nuts', 250, 14, 8, 18),
+    m('mon-din',  '8:00 PM',  20*60,    'Dinner', 'Dal Fry + 2 Rotis + Salad', 500, 22, 70, 10),
+  ],
+  tue: [
+    m('tue-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Banana + Peanut Butter', 190, 5, 32, 7),
+    m('tue-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('tue-bf',   '10:00 AM', 10*60,    'Breakfast', 'Veg Poha + 2 Boiled Eggs', 400, 18, 52, 10),
+    m('tue-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Paneer Bhurji (150g) + 2 Rotis + Salad', 580, 32, 45, 22),
+    m('tue-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Greek Yogurt (200g) + Banana', 240, 16, 38, 4),
+    m('tue-din',  '8:00 PM',  20*60,    'Dinner', 'Egg Curry (3 eggs) + 1 cup Rice', 510, 28, 58, 18),
+  ],
+  wed: [
+    m('wed-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Apple + Almonds (10)', 140, 3, 24, 6),
+    m('wed-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('wed-bf',   '10:00 AM', 10*60,    'Breakfast', 'Uttapam (2 pcs) + Sambar + Boiled Egg', 400, 18, 52, 10),
+    m('wed-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Grilled Fish (150g) + 2 Rotis + Salad', 480, 38, 44, 12),
+    m('wed-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Roasted Makhana + Masala Chaas', 200, 8, 30, 4),
+    m('wed-din',  '8:00 PM',  20*60,    'Dinner', 'Chicken Soup (300ml) + 2 WW Rotis', 450, 36, 42, 12),
+  ],
+  thu: [
+    m('thu-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Banana + Black Coffee', 120, 1, 28, 0.5),
+    m('thu-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('thu-bf',   '10:00 AM', 10*60,    'Breakfast', 'Dalia Khichdi + 1 Boiled Egg', 380, 20, 54, 8),
+    m('thu-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Chole + 1 cup Rice + Onion Salad', 560, 20, 82, 12),
+    m('thu-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Peanut Butter (1.5 tbsp) + Apple', 230, 6, 34, 10),
+    m('thu-din',  '8:00 PM',  20*60,    'Dinner', 'Grilled Chicken (180g) + Stir Fried Veg', 420, 42, 20, 14),
+  ],
+  fri: [
+    m('fri-bf',   '8:00 AM',  8*60,     'Breakfast', 'Moong Dal Chilla (3) + Curd + Coffee', 420, 24, 48, 10),
+    m('fri-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Chicken Wrap (2 rotis) + Salad', 520, 40, 50, 14),
+    m('fri-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Banana + Peanut Butter', 190, 5, 32, 7),
+    m('fri-pre',  '7:30 PM',  19*60+30, 'Pre-Match Light Meal', 'Idli (3) + Sambar (light)', 330, 12, 62, 4),
+    m('fri-post', '10:45 PM', 22*60+45, 'Post-Match Whey', '1 scoop whey in water (recovery)', 125, 25, 5, 1),
+  ],
+  sat: [
+    m('sat-bf',   '8:30 AM',  8*60+30,  'Breakfast', 'Egg Paratha (2) + Curd', 520, 26, 58, 18),
+    m('sat-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Fish Curry + 1 cup Rice + Salad', 530, 36, 55, 14),
+    m('sat-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Whey Shake + 1 Fruit', 220, 26, 20, 1),
+    m('sat-din',  '8:30 PM',  20*60+30, 'Dinner', 'Dal Makhani + 2 Rotis + Salad', 540, 22, 70, 16),
+  ],
+  sun: [
+    m('sun-bf',   '9:00 AM',  9*60,     'Breakfast', 'Aloo Paratha + Curd + Boiled Egg', 490, 20, 66, 16),
+    m('sun-lun',  '2:00 PM',  14*60,    'Lunch', 'Dal Tadka + 1 cup Rice + Papad', 500, 22, 75, 10),
+    m('sun-eve',  '5:30 PM',  17*60+30, 'Evening Snack', 'Mixed Nuts + Masala Chaas', 240, 8, 16, 16),
+    m('sun-din',  '8:30 PM',  20*60+30, 'Dinner', 'Chicken Tikka Masala (200g) + 2 Rotis', 560, 44, 48, 18),
+  ]
+}
+
+const WEEK_PLAN_C = {
+  mon: [
+    m('mon-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Banana + Black Coffee', 120, 1, 28, 0.5),
+    m('mon-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('mon-bf',   '10:00 AM', 10*60,    'Breakfast', 'Idli (3) + Sambar + 2 Boiled Eggs', 430, 24, 52, 10),
+    m('mon-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Grilled Chicken (180g) + 1 cup Rice + Salad', 530, 44, 50, 12),
+    m('mon-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Roasted Chana + Coconut Water', 190, 10, 30, 3),
+    m('mon-din',  '8:00 PM',  20*60,    'Dinner', 'Egg Bhurji (3 eggs) + 2 Rotis + Salad', 480, 28, 44, 18),
+  ],
+  tue: [
+    m('tue-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Apple + Black Coffee', 100, 0.5, 25, 0.3),
+    m('tue-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('tue-bf',   '10:00 AM', 10*60,    'Breakfast', 'Dosa (2) + Chutney + Boiled Egg', 420, 18, 56, 10),
+    m('tue-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Soya Chunks Sabzi + 2 Rotis + Curd', 510, 30, 60, 12),
+    m('tue-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Whey Shake + Banana', 230, 26, 30, 1),
+    m('tue-din',  '8:00 PM',  20*60,    'Dinner', 'Masoor Dal + 2 Rotis + Salad', 480, 24, 66, 8),
+  ],
+  wed: [
+    m('wed-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Banana + Black Coffee', 120, 1, 28, 0.5),
+    m('wed-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('wed-bf',   '10:00 AM', 10*60,    'Breakfast', 'Upma + 2 Boiled Eggs', 390, 20, 50, 10),
+    m('wed-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Chicken Sandwich (WW) + Salad + Chaas', 480, 40, 42, 14),
+    m('wed-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Greek Yogurt + Walnuts', 240, 14, 14, 14),
+    m('wed-din',  '8:00 PM',  20*60,    'Dinner', 'Palak Paneer + 2 Rotis + Curd', 550, 28, 50, 22),
+  ],
+  thu: [
+    m('thu-pre',  '7:15 AM',  7*60+15,  'Pre-Workout Snack', 'Banana + Black Coffee', 120, 1, 28, 0.5),
+    m('thu-post', '9:15 AM',  9*60+15,  'Post-Workout Whey', '1 scoop whey in water', 125, 25, 5, 1),
+    m('thu-bf',   '10:00 AM', 10*60,    'Breakfast', 'PB Toast (2 WW) + Boiled Egg', 380, 20, 36, 16),
+    m('thu-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Chicken Keema + 2 Rotis + Salad', 540, 44, 46, 18),
+    m('thu-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Fruit Bowl + Handful Almonds', 220, 5, 32, 10),
+    m('thu-din',  '8:00 PM',  20*60,    'Dinner', 'Rajma + 1 cup Rice + Curd', 560, 22, 82, 10),
+  ],
+  fri: [
+    m('fri-bf',   '8:00 AM',  8*60,     'Breakfast', 'Oats Porridge + Boiled Eggs (2) + Coffee', 420, 22, 54, 10),
+    m('fri-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Grilled Fish (150g) + 1 cup Rice + Salad', 480, 38, 50, 10),
+    m('fri-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Boiled Egg + Apple', 170, 8, 28, 6),
+    m('fri-pre',  '7:30 PM',  19*60+30, 'Pre-Match Light Meal', 'Banana (2) + Dates (3)', 200, 2, 48, 0.5),
+    m('fri-post', '10:45 PM', 22*60+45, 'Post-Match Whey', '1 scoop whey in water (recovery)', 125, 25, 5, 1),
+  ],
+  sat: [
+    m('sat-bf',   '8:30 AM',  8*60+30,  'Breakfast', 'Omelette (3 eggs) + 2 WW Toast + Coffee', 430, 28, 34, 18),
+    m('sat-lun',  '1:30 PM',  13*60+30, 'Lunch', 'Chicken Biryani (1 plate) + Raita', 580, 36, 62, 16),
+    m('sat-eve',  '5:00 PM',  17*60,    'Evening Snack', 'Roasted Chana + Masala Chaas', 200, 12, 28, 4),
+    m('sat-din',  '8:30 PM',  20*60+30, 'Dinner', 'Tofu Bhurji + 2 Rotis + Salad', 480, 28, 48, 18),
+  ],
+  sun: [
+    m('sun-bf',   '9:00 AM',  9*60,     'Breakfast', 'Pav Bhaji (2 pav) + Boiled Eggs (2)', 520, 24, 68, 16),
+    m('sun-lun',  '2:00 PM',  14*60,    'Lunch', 'Mutton Curry (150g) + 1 cup Rice', 540, 38, 52, 16),
+    m('sun-eve',  '5:30 PM',  17*60+30, 'Evening Snack', 'Whey + Banana + Peanut Butter', 290, 27, 34, 8),
+    m('sun-din',  '8:30 PM',  20*60+30, 'Dinner', 'Moong Dal Soup + 2 Rotis + Curd', 460, 22, 62, 8),
+  ]
+}
+
+const WEEK_PLANS = { A: WEEK_PLAN, B: WEEK_PLAN_B, C: WEEK_PLAN_C }
+
 /* ---------------------------------------------------------------------------
    Snack data
 --------------------------------------------------------------------------- */
@@ -431,13 +541,13 @@ const SatelliteRing = ({ label, value, target, planned, color, unit = 'g' }) => 
    today never breaks the streak — it simply isn't counted until it hits.
    Past days must hit the target to count; otherwise the chain breaks.
 --------------------------------------------------------------------------- */
-const computeProteinStreak = (logs, proteinMin) => {
+const computeProteinStreak = (logs, proteinMin, weekPlan) => {
   let streak = 0
   let cursor = todayISO()
   const today = cursor
   for (let i = 0; i < 365; i++) {
     const dayKey = isoToDayKey(cursor)
-    const plan = WEEK_PLAN[dayKey]
+    const plan = weekPlan[dayKey]
     const dayLog = logs[cursor]
     if (dayLog?.cheatDay) { cursor = addDays(cursor, -1); continue } // cheat days don't break or count
     const hasAnyLog = dayLog && dayLog.meals && dayLog.meals.length > 0
@@ -1739,9 +1849,9 @@ const RemindersCard = ({ plan, dayLog, water, waterTarget, onOpenWater }) => {
 /* ---------------------------------------------------------------------------
    Today / Daily View
 --------------------------------------------------------------------------- */
-const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger, openChooser, profile, weights, setWeights, onOpenWater, onOpenWeight }) => {
+const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger, openChooser, profile, weights, setWeights, onOpenWater, onOpenWeight, weekPlan, activeTemplate, setActiveTemplate }) => {
   const dayKey = isoToDayKey(date)
-  const plan = WEEK_PLAN[dayKey]
+  const plan = weekPlan[dayKey]
   const dayLog = logs[date] || { meals: [], water: 0 }
   const planned = useMemo(() => sumPlanned(plan), [plan])
   const logged = useMemo(() => sumLogged(dayLog, plan), [dayLog, plan])
@@ -1778,7 +1888,7 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
     const day = prev[date] || { meals: [], water: 0 }
     return { ...prev, [date]: { ...day, cheatDay: !day.cheatDay } }
   })
-  const streak = useMemo(() => computeProteinStreak(logs, t.protein.min), [logs, t.protein.min])
+  const streak = useMemo(() => computeProteinStreak(logs, t.protein.min, weekPlan), [logs, t.protein.min, weekPlan])
 
   return (
     <div className="space-y-4 pb-fab">
@@ -1807,6 +1917,18 @@ const TodayView = ({ date, setDate, logs, setLogs, openLogger, openWorkoutLogger
             className={`px-3 py-2.5 text-xs rounded-xl font-semibold active:scale-95 transition ${isCheatDay ? 'bg-[#fbbf24] text-black' : 'border border-white/10 text-zinc-400 hover:bg-white/5'}`}>
             🍕
           </button>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest">Week Plan</span>
+          <div className="flex gap-1 ml-1">
+            {['A','B','C'].map(t => (
+              <button key={t} onClick={() => setActiveTemplate(t)}
+                className={`w-7 h-7 rounded-lg text-xs font-bold transition active:scale-95 ${activeTemplate === t ? 'bg-[#d7ff3a] text-black' : 'border border-white/10 text-zinc-400 hover:bg-white/5'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] text-zinc-600 ml-1">Switch to vary your weekly meals</span>
         </div>
       </Card>
 
@@ -1953,7 +2075,7 @@ const CHART_MACROS = [
   { key: 'fat',      label: 'Fat',      unit: 'g',    plannedField: 'plannedFat',     loggedField: 'loggedFat',     loggedColor: '#a78bfa', targetKey: 'fat'      }
 ]
 
-const SummaryView = ({ logs, profile, weights, setWeights }) => {
+const SummaryView = ({ logs, profile, weights, setWeights, weekPlan }) => {
   const [chartMacro, setChartMacro] = useState('calories')
   const [weekOffset, setWeekOffset] = useState(0) // 0 = current week, -1 = last week, etc.
   const t = profile.targets
@@ -1962,7 +2084,7 @@ const SummaryView = ({ logs, profile, weights, setWeights }) => {
   const days = DAY_KEYS.map((k, i) => ({ key: k, iso: addDays(weekStart, i) }))
 
   const data = days.map(({ key, iso }) => {
-    const plan = WEEK_PLAN[key]
+    const plan = weekPlan[key]
     const planned = sumPlanned(plan)
     const dayLog = logs[iso]
     const logged = sumLogged(dayLog, plan)
@@ -2507,6 +2629,7 @@ export default function App() {
   const [logs, setLogs] = useState({})
   const [weights, setWeights] = useState({})
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
+  const [activeTemplate, setActiveTemplate] = useState('A')
   const [loaded, setLoaded] = useState(false)
   const [logger, setLogger] = useState(null) // { mealId, mealName } | null
   const [showSettings, setShowSettings] = useState(false)
@@ -2539,6 +2662,7 @@ export default function App() {
             targets: { ...DEFAULT_PROFILE.targets, ...(parsed.profile.targets || {}) }
           })
         }
+        if (parsed.activeTemplate) setActiveTemplate(parsed.activeTemplate)
       } catch { /* corrupted, ignore */ }
     }
     setLoaded(true)
@@ -2547,7 +2671,7 @@ export default function App() {
   // Persist on change
   useEffect(() => {
     if (!loaded) return
-    storage.set(STORAGE_KEY, JSON.stringify({ logs, weights, profile }))
+    storage.set(STORAGE_KEY, JSON.stringify({ logs, weights, profile, activeTemplate }))
   }, [logs, weights, profile, loaded])
 
   // Browser notifications — request permission once, then fire on meal/water triggers
@@ -2581,7 +2705,7 @@ export default function App() {
       const dayLog = logs[today] || { meals: [], water: 0 }
       const water = dayLog.water || 0
       const wTarget = profile.waterTarget
-      const dayPlan = WEEK_PLAN[isoToDayKey(today)]
+      const dayPlan = WEEK_PLANS[activeTemplate][isoToDayKey(today)]
 
       // Meal reminders — 15 min grace period after scheduled time
       dayLog.cheatDay || dayPlan.forEach(meal => {
@@ -2612,7 +2736,7 @@ export default function App() {
     check()
     const interval = setInterval(check, 60_000)
     return () => clearInterval(interval)
-  }, [logs, loaded, profile.waterTarget, notifPermission])
+  }, [logs, loaded, profile.waterTarget, notifPermission, activeTemplate])
 
   const flash = useCallback((msg) => {
     setToast(msg)
@@ -2633,7 +2757,7 @@ export default function App() {
   useEffect(() => {
     if (!loaded) return
     const dayKey = isoToDayKey(date)
-    const plan = WEEK_PLAN[dayKey]
+    const plan = WEEK_PLANS[activeTemplate][dayKey]
     const dayLog = logs[date]
     const water = dayLog?.water || 0
     const totals = dayLog
@@ -2766,8 +2890,8 @@ export default function App() {
 
       <main className="p-3">
         <div key={tab} className="page-enter">
-          {tab === 'today'  && <TodayView   date={date} setDate={setDate} logs={logs} setLogs={setLogs} openLogger={openLogger} openWorkoutLogger={openWorkoutLogger} openChooser={() => setChooserOpen(true)} profile={profile} weights={weights} setWeights={setWeights} onOpenWater={() => setWaterOpen(true)} onOpenWeight={() => setWeightOpen(true)} />}
-          {tab === 'log'    && <SummaryView logs={logs} profile={profile} weights={weights} setWeights={setWeights} />}
+          {tab === 'today'  && <TodayView   date={date} setDate={setDate} logs={logs} setLogs={setLogs} openLogger={openLogger} openWorkoutLogger={openWorkoutLogger} openChooser={() => setChooserOpen(true)} profile={profile} weights={weights} setWeights={setWeights} onOpenWater={() => setWaterOpen(true)} onOpenWeight={() => setWeightOpen(true)} weekPlan={WEEK_PLANS[activeTemplate]} activeTemplate={activeTemplate} setActiveTemplate={setActiveTemplate} />}
+          {tab === 'log'    && <SummaryView logs={logs} profile={profile} weights={weights} setWeights={setWeights} weekPlan={WEEK_PLANS[activeTemplate]} />}
           {tab === 'snacks' && <SnacksView  date={date} setLogs={setLogs} flash={flash} />}
         </div>
       </main>
